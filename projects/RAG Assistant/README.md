@@ -1,195 +1,102 @@
-# RAG Python local — Windows et Linux
+# Local Python RAG — Windows and Linux
 
-Projet de recherche documentaire sur PDF : extraction avec PyMuPDF, découpage en
-tokens, embeddings **Sentence Transformers**, index **FAISS**, réponses avec
-**Ollama**, citations document/page et évaluation de la recherche.
+A PDF-based retrieval-augmented generation (RAG) project featuring text extraction with PyMuPDF, token-based chunking, **Sentence Transformers** embeddings, a **FAISS** index, answer generation with **Ollama**, and document/page citations.
 
-Corpus gratuit : le glossaire par chapitre de *Think Python* d’Allen B. Downey
-(**15 pages en anglais**), téléchargé depuis une révision fixe du dépôt officiel.
-Les questions peuvent être françaises ou anglaises. [Source et droits](corpus/README.md).
-Le corpus dérive d’un livre sous CC BY-NC 3.0 : usage non commercial.
+## Requirements
 
-## Prérequis
-
-- **Windows 10/11 x64** ou **Linux x86_64** récent (glibc >= 2.28), Python **3.11 ou 3.12**.
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) pour l’installation verrouillée.
-- [Ollama](https://ollama.com/download) installé avec l’installeur natif de votre OS.
-- CPU suffisant ; GPU facultatif pour Ollama. Prévoir **8 Go de RAM** au minimum
-  (16 Go conseillés) et environ **10 Go de disque libre** selon les caches/installateurs.
-- Connexion Internet pour les premiers téléchargements uniquement. Pas de clé API.
-
-Modèles par défaut :
-
-| Rôle | Modèle | Choix |
-|---|---|---|
-| Embeddings | `intfloat/multilingual-e5-small` via Sentence Transformers | Multilingue, 384 dimensions, CPU ; révision Hugging Face fixée |
-| Génération | `qwen2.5:3b` dans Ollama | Français/anglais, modèle compact d’environ 1,9 Go quantifié |
-
-Le tag Ollama est importé explicitement ; sa version exacte peut évoluer en amont.
-Consulter `ollama list` pour son identifiant et `ollama show qwen2.5:3b` pour ses
-métadonnées et sa licence. Les modèles ont leurs propres conditions d’utilisation.
+- **Windows 10/11 x64** or a recent **Linux x86_64** distribution (glibc >= 2.28), with **Python 3.11 or 3.12**.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) for reproducible dependency installation.
+- [Ollama](https://ollama.com/download), installed using the native installer for your operating system.
+- A suitable CPU; a GPU is optional for Ollama. At least **8 GB RAM** (16 GB recommended) and approximately **10 GB of free disk space**, depending on caches and installers.
+- An internet connection for the initial downloads only. No API key is required.
 
 ## Installation
 
-Toutes les commandes suivantes s’exécutent **à la racine du dépôt**, sur la branche
-`preparation-projet`. Aucun droit administrateur n’est nécessaire pour le projet Python.
+Run all commands below **from the repository root**, on the `preparation-projet` branch. Administrator privileges are not required for the Python project.
 
 ```sh
 uv sync --frozen --extra dev
 ```
 
-`uv.lock` fixe les dépendances et les empreintes des paquets pour les deux OS et les
-deux versions de Python. PyTorch est pris dans l’index CPU officiel, sans pile CUDA.
-`uv run --frozen` utilise automatiquement `.venv` : aucune activation PowerShell
-ni modification d’ExecutionPolicy n’est nécessaire.
+`uv.lock` pins dependency versions and package hashes for both operating systems and supported Python versions. PyTorch is installed from the official CPU package index, without CUDA dependencies. `uv run --frozen` automatically uses `.venv`, so there is no need to activate the environment in PowerShell or change its `ExecutionPolicy`.
 
-Alternative sans uv (résolution non verrouillée) : créer un venv, l’activer puis :
+Alternatively, without uv (dependencies are not locked), create and activate a virtual environment, then run:
 
 ```sh
 python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -e ".[dev]"
 ```
 
-Sous Linux sans installation système d’Ollama, le helper optionnel suivant installe
-la version **0.40.5** dans un répertoire local, avec SHA-256 officiel fixé. Il requiert
-`curl`, `tar`, `zstd` et `sha256sum` :
+On Linux, if Ollama is not installed system-wide, the optional helper below installs version **0.40.5** into a local directory and verifies its pinned official SHA-256 checksum. It requires `curl`, `tar`, `zstd`, and `sha256sum`:
 
 ```sh
 bash scripts/install_ollama_linux.sh
 ```
 
-Dans ce cas, remplacer `ollama` par `.cache/ollama/bin/ollama` dans les commandes de
-démarrage. Sous Windows, utiliser l’installeur officiel et rouvrir le terminal.
+In that case, replace `ollama` with `.cache/ollama/bin/ollama` in the startup commands. On Windows, use the official installer and reopen the terminal.
 
-## Exécution de bout en bout
+## End-to-End Usage
 
-Démarrer Ollama dans un **autre terminal** si son application/service ne tourne pas :
+Start Ollama in **another terminal** if its application or service is not already running:
 
 ```sh
 ollama serve
 ```
 
-Puis, depuis la racine du dépôt (commandes identiques sous PowerShell et Bash) :
+Then run the following commands from the repository root (the same commands work in PowerShell and Bash):
 
 ```sh
 uv run --frozen rag download
 uv run --frozen rag extract
 uv run --frozen rag index
 uv run --frozen rag pull-model
-uv run --frozen rag search "Qu’est-ce que la récursion ?" -k 5
-uv run --frozen rag ask "Qu’est-ce que la récursion ?" -k 5
-uv run --frozen rag evaluate -k 5
+uv run --frozen rag search "What is recursion?" -k 5
+uv run --frozen rag ask "What is recursion?" -k 5
 uv run --frozen python -m pytest -q
 ```
 
-`index` refait lui-même l’extraction ; `extract` est fourni pour examiner les pages.
-La première indexation télécharge les poids E5 (environ 470 Mo). `pull-model` importe
-le LLM par l’API locale Ollama ; l’équivalent natif est `ollama pull qwen2.5:3b`.
-Sans Ollama, téléchargement, extraction, indexation, recherche et évaluation restent
-utilisables. Seules l’importation du LLM et la génération nécessitent son service.
+`index` also performs extraction, so `extract` is provided separately for inspecting the extracted pages. The first indexing run downloads the E5 model weights (approximately 470 MB). `pull-model` downloads the LLM through Ollama's local API; the equivalent native command is `ollama pull qwen2.5:3b`.
 
-`ask` demande une sortie JSON contrainte à Ollama, avec la réponse, les identifiants
-des sources et un indicateur `insufficient_context`. Le résultat contient aussi les
-extraits, scores, pages et repères `[S1]`, `[S2]`, etc. Les références sélectionnées
-par le modèle sont rendues visibles dans la réponse. Les citations absentes/invalides sont signalées ; une
-citation syntaxiquement valide ne garantit pas que l’affirmation est correcte.
-Le prompt demande de s’abstenir si les documents ne suffisent pas. Les instructions
-présentes dans les PDF sont traitées comme des données, mais la résistance à
-l’injection de prompt n’est pas garantie.
+Downloading, extraction, indexing, and search work without Ollama. Only LLM installation and answer generation require the Ollama service.
 
-Pour choisir un autre serveur ou modèle :
+`ask` requests a constrained JSON response from Ollama, including the generated answer, source identifiers, and an `insufficient_context` flag. The output also includes retrieved excerpts, similarity scores, page numbers, and source labels such as `[S1]` and `[S2]`. Citations selected by the model are shown in the answer. Missing or invalid citations are flagged, although a syntactically valid citation does not guarantee that the claim is correct.
+
+The prompt instructs the model to abstain when the documents do not provide sufficient information. Instructions found within PDFs are treated as document content, but resistance to prompt injection is not guaranteed.
+
+To select a different Ollama server or model:
 
 ```sh
 uv run --frozen rag pull-model --llm qwen2.5:7b --host http://127.0.0.1:11434
 uv run --frozen rag ask "What is a tuple?" --llm qwen2.5:7b
 ```
 
-`OLLAMA_HOST` est aussi accepté (URL HTTP/HTTPS complète). Un modèle plus grand
-nécessite davantage de mémoire. Depuis un autre répertoire, utiliser
-`rag --root CHEMIN_DU_DEPOT ...`.
+`OLLAMA_HOST` is also supported (as a complete HTTP/HTTPS URL). Larger models require more memory. When running the CLI from another directory, use `rag --root PATH_TO_REPOSITORY ...`.
 
-## Import GGUF si le registre Ollama est inaccessible
-
-Une alternative utilise directement le **GGUF officiel Qwen2.5-3B-Instruct Q4_K_M**
-sur Hugging Face (environ 2,1 Go), puis les API publiques d’import Ollama. Elle ne
-nécessite aucun fichier Modelfile ni accès du serveur Ollama à Internet :
-
-```sh
-uv run --frozen python scripts/download_gguf.py
-uv run --frozen rag import-gguf artifacts/llm/qwen2.5-3b-instruct-q4_k_m.gguf --llm qwen2.5-local:3b
-uv run --frozen rag ask "Qu’est-ce que la récursion ?" --llm qwen2.5-local:3b
-```
-
-Le script fixe la révision officielle
-`Qwen/Qwen2.5-3B-Instruct-GGUF@7dabda4d13d513e3e842b20f0d435c732f172cbe`
-et vérifie le SHA-256 publié par le stockage Hugging Face avant l’import. Le fichier
-reste hors Git. Le modèle importé porte un nom distinct du tag du registre.
-`import-gguf` accepte aussi vos propres GGUF compatibles Ollama, à condition d’avoir
-vérifié leur provenance et leurs droits. Ollama déduit le template du GGUF ; les
-instructions documentaires sont transmises à chaque requête.
-
-## Fonctionnement et fichiers
+## How It Works and Project Files
 
 ```text
-PDF vérifié → pages avec provenance → chunks de 300 tokens, chevauchement 50
-            → E5 : préfixe passage:, vecteurs normalisés → FAISS IndexFlatIP
-Question    → E5 : préfixe query: → top K → Ollama → réponse avec sources
+Verified PDF → pages with source metadata → 300-token chunks, 50-token overlap
+             → E5: passage: prefix, normalized vectors → FAISS IndexFlatIP
+Question     → E5: query: prefix → top K matches → Ollama → sourced answer
 ```
 
-Le découpage respecte les pages et le tokenizer réel. La taille reste sous la limite
-E5 de 512 tokens, en réservant la place des préfixes et tokens spéciaux. FAISS réalise
-une recherche exacte par produit scalaire sur des vecteurs normalisés, soit le
-cosinus ; ce choix simple convient à un petit corpus. Aucun entraînement n’est requis.
+Chunking respects page boundaries and uses the model's actual tokenizer. Chunk sizes remain within E5's 512-token limit, accounting for prefixes and special tokens. FAISS performs exact inner-product search over normalized vectors, equivalent to cosine similarity. This straightforward approach is suitable for a small corpus and requires no model training.
 
-- `corpus/manifest.json` : sources, droits, empreintes et pagination.
-- `src/rag_python/` : CLI, téléchargement, extraction, index, évaluation et client Ollama.
-- `evaluation/questions.jsonl` : **20 questions positives + 3 hors corpus**, réponses et preuves.
-- `data/pdfs/`, `data/pages.jsonl` : documents téléchargés et extraction, ignorés par Git.
-- `artifacts/index/generation-*/` : index FAISS, chunks JSONL et métadonnées.
-- `artifacts/index/CURRENT` : génération active ; remplacement atomique après écriture.
-- `artifacts/evaluation.json` : rapport de recherche, rangs et scores par question.
-- `.cache/huggingface/` : poids d’embeddings, ignorés par Git.
+- `corpus/manifest.json`: document sources, licenses, checksums, and page counts.
+- `src/rag_python/`: CLI, downloading, extraction, indexing, and the Ollama client.
+- `data/pdfs/`, `data/pages.jsonl`: downloaded documents and extracted text, excluded from Git.
+- `artifacts/index/generation-*/`: FAISS index, JSONL chunks, and metadata.
+- `artifacts/index/CURRENT`: active index generation, updated atomically after writing.
+- `.cache/huggingface/`: cached embedding model weights, excluded from Git.
 
-Les anciennes générations sont conservées pour permettre un retour manuel en arrière.
-La révision réellement chargée du modèle est enregistrée et réutilisée à la recherche.
-Il faut reconstruire l’index après changement de corpus, modèle ou découpage :
+Previous index generations are retained to allow manual rollback. The revision of the embedding model actually loaded is recorded and reused during retrieval. Rebuild the index whenever the corpus, embedding model, or chunking configuration changes:
 
 ```sh
 uv run --frozen rag index --chunk-size 250 --overlap 40 --batch-size 8
 ```
 
-Les modèles alternatifs doivent suivre le protocole E5 (`query:`/`passage:`), et
-`--revision` peut fixer leur commit. Ne charger que des index locaux de confiance :
-les empreintes détectent la corruption accidentelle, sans signer les fichiers.
+Alternative embedding models must follow the E5 `query:` / `passage:` prefix convention, and `--revision` can pin a specific model commit. Only load trusted local indexes: checksums can detect accidental corruption but do not provide cryptographic authenticity.
 
-## Évaluation et limites
+## Free Corpus Reference
 
-[Protocole détaillé](evaluation/README.md) : **Hit@K**, **MRR@K**, et rappel des preuves.
-Les questions et réponses de référence ne sont jamais indexées ni données au LLM.
-Les négatifs servent à examiner l’abstention ; ils ne sont pas inclus dans les scores
-de recherche. L’évaluation automatique ne juge pas les réponses générées.
-
-Les tests courants utilisent de vrais PDF et FAISS, avec un encodeur déterministe
-pour tester la mécanique sans télécharger de modèle. La vérification des annotations
-sur le corpus réel est ignorée explicitement si `rag download` n’a pas été exécuté.
-La CI fournie prévoit Linux et Windows, Python 3.11/3.12 ; elle ne prouve pas une
-exécution Windows tant qu’un run sur ce système n’a pas abouti. Un lancement manuel
-`workflow_dispatch` ajoute une indexation E5 réelle et conserve le rapport de recherche.
-
-## Dépannage
-
-- **Ollama inaccessible** : démarrer `ollama serve`, vérifier `ollama list`, puis
-  `rag pull-model`. Si le port est occupé, utiliser le service déjà présent.
-- **Mémoire insuffisante** : réduire `--batch-size` pour E5 ; choisir un LLM plus petit
-  avec `--llm` pour Ollama. Les embeddings fonctionnent sur CPU par défaut.
-- **PDF modifié** : le SHA-256 bloque un téléchargement différent. Examiner la source
-  avant de modifier le manifeste ; ne pas supprimer cette vérification.
-- **PDF scanné** : ajouter un OCR préalable. Pas d’OCR inclus.
-- **Réseau filtré** : autoriser GitHub/raw.githubusercontent.com, PyPI/files.pythonhosted.org,
-  download.pytorch.org et ses redirections, huggingface.co, us.aws.cdn.hf.co,
-  cas-bridge.xethub.hf.co, registry.ollama.ai et le stockage R2 indiqué par Ollama.
-  Ne pas désactiver TLS. Le client utilise HTTP standard Hugging Face par défaut
-  (`HF_HUB_DISABLE_XET=1`) et respecte les proxies de l’environnement.
-- **Cache** : `HF_HOME` peut personnaliser le cache ; sinon le projet utilise
-  `.cache/huggingface`. Une fois les modèles présents, la recherche peut être lancée
-  hors ligne avec `HF_HUB_OFFLINE=1` ; Ollama doit toujours être démarré pour `ask`.
+The example corpus is the chapter-by-chapter glossary from *Think Python* by Allen B. Downey, downloaded from a pinned revision of the official repository. Questions can be asked in either English or French.

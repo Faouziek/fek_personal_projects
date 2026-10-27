@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Black-box CLI tests; Python standard library only."""
+
 import json
 import pathlib
 import re

@@ -1,4 +1,4 @@
-"""Optional real-corpus annotation verification; download is explicit, never implicit."""
+
 from pathlib import Path
 
 import pytest

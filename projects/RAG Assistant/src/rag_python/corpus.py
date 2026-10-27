@@ -1,4 +1,3 @@
-"""Verified PDF download and page-preserving text extraction."""
 import hashlib
 import json
 import os

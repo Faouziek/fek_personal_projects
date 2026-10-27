@@ -20,7 +20,6 @@ class WordTokenizer:
 
 
 class TestEncoder:
-    """Deterministic test double; does not validate real embedding quality."""
     __test__ = False
     tokenizer = WordTokenizer()
     max_seq_length = 512
