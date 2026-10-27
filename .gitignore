@@ -1,0 +1,71 @@
+# Global
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Packaging
+*.egg-info/
+dist/
+.pybuild/
+
+# Local caches
+.cache/
+.uv/
+
+# RAG generated data and indexes
+/projects/RAG Assistant/data/
+/projects/RAG Assistant/artifacts/
+
+# Downloaded documents (keep corpus metadata)
+/projects/RAG Assistant/corpus/*.pdf
+
+# Build directories
+/projects/cardgame/build/
+/projects/cardgame/bin/
+/projects/cardgame/out/
+/projects/cardgame/cmake-build-*/
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.pdb
+*.d
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Generated archives
+/projects/cardgame/*.zip
